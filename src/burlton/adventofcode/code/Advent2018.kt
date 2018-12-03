@@ -1,4 +1,4 @@
-package burlton.adventofcode2018.code
+package burlton.adventofcode.code
 
 import java.io.File
 
@@ -8,14 +8,54 @@ fun main(args: Array<String>)
     calculateFirstRepeatedFrequency()
 
     calculateBoxesCheckSum()
+    findMatchingBoxes()
+}
+
+private fun findMatchingBoxes()
+{
+    val boxList = readBoxes()
+
+    for ((ix1, box) in boxList.withIndex())
+    {
+        for ((ix2, box2) in boxList.withIndex())
+        {
+            if (ix1 > ix2) {
+                checkMatchingBoxes(box, box2)
+            }
+        }
+    }
+}
+
+private fun checkMatchingBoxes(box1 : String, box2 : String)
+{
+    var countMatching = 0
+    var mismatchIx = 0
+    box1.forEachIndexed{index, letter ->
+
+        if (box2[index].equals(letter)) {
+            countMatching++
+        }
+        else
+        {
+            mismatchIx = index
+        }
+    }
+
+    if (countMatching == box1.length - 1)
+    {
+        val finalbox1 = box1.removeRange(mismatchIx, mismatchIx+1)
+        val finalbox2 = box2.removeRange(mismatchIx, mismatchIx+1)
+
+        println("2B: $finalbox1 = $finalbox2 : ${finalbox1 == finalbox2}")
+    }
 }
 
 private fun calculateBoxesCheckSum()
 {
     val boxList = readBoxes()
 
-    val boxesWithTwoCharsRepeated = boxList.filter {it -> hasRepeatedLetters(it, 2)}
-    val boxesWithThreeCharsRepeated = boxList.filter{it -> hasRepeatedLetters(it, 3)}
+    val boxesWithTwoCharsRepeated = boxList.filter {it -> hasRepeatedLetters(it, 2) }
+    val boxesWithThreeCharsRepeated = boxList.filter{it -> hasRepeatedLetters(it, 3) }
 
     val checksum = boxesWithThreeCharsRepeated.size * boxesWithTwoCharsRepeated.size
     println("2A: $checksum")
