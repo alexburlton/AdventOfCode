@@ -12,42 +12,66 @@ fun main(args: Array<String>)
     findMatchingBoxes()
 
     findOverlappingTiles()
+    findNonOverlappingClaim()
 }
 
 private fun findOverlappingTiles()
 {
-    val claimList = readFile("3. Fabric Claims")
-
-    val hmSquareToClaims = mutableMapOf<Point, Int>()
-    for (claim in claimList)
-    {
-        val parts = claim.split(" ")
-
-        val startCoords = parts[2].removeSuffix(":")
-        val coordParts = startCoords.split(",")
-
-        val startPt = Point(coordParts[0].toInt(), coordParts[1].toInt())
-
-        val dimensions = parts[3].split("x")
-        val width = dimensions[0].toInt()
-        val height = dimensions[1].toInt()
-
-        for (x in 0 until width)
-        {
-            for (y in 0 until height)
-            {
-                val pt = Point(startPt.x + x, startPt.y + y)
-
-                val current = hmSquareToClaims.getOrDefault(pt, 0)
-                hmSquareToClaims[pt] = current+1
-            }
-        }
-    }
+    val hmSquareToClaims = getClaimsMap()
 
     val filteredMap = hmSquareToClaims.filterKeys {pt -> hmSquareToClaims[pt]!! > 1}
     println("3A: Number of overlapping square inches = ${filteredMap.size}")
 }
 
+private fun findNonOverlappingClaim()
+{
+    val hmSquareToClaims = getClaimsMap()
+
+    val claimList = readFile("3. Fabric Claims")
+    for (claimStr in claimList)
+    {
+        val claim = Claim(claimStr)
+
+        if (isNonOverlappingClaim(claim, hmSquareToClaims))
+        {
+            println("3B: Non-overlapping claim is #${claim.claimId}")
+        }
+    }
+}
+
+private fun isNonOverlappingClaim(claim : Claim, hmPointToClaimCount : Map<Point, Int>) : Boolean
+{
+    val claimPoints = claim.getClaimPoints()
+    for (pt in claimPoints)
+    {
+        if (hmPointToClaimCount[pt]!! > 1)
+        {
+            return false
+        }
+    }
+
+    return true
+}
+
+private fun getClaimsMap() : Map<Point, Int>
+{
+    val claimList = readFile("3. Fabric Claims")
+
+    val hmSquareToClaims = mutableMapOf<Point, Int>()
+    for (claimStr in claimList)
+    {
+        val claim = Claim(claimStr)
+
+        val claimPoints = claim.getClaimPoints()
+        for (pt in claimPoints)
+        {
+            val current = hmSquareToClaims.getOrDefault(pt, 0)
+            hmSquareToClaims[pt] = current+1
+        }
+    }
+
+    return hmSquareToClaims
+}
 
 private fun findMatchingBoxes()
 {
@@ -165,4 +189,43 @@ private fun readFile(filename : String) : MutableList<String>
     File(filename).useLines{ lines -> lines.forEach{boxList.add(it)}}
 
     return boxList
+}
+
+private class Claim(claimStr : String)
+{
+    var startPt : Point
+    var width : Int
+    var height : Int
+    var claimId : Int
+
+    init
+    {
+        val parts = claimStr.split(" ")
+
+        val startCoords = parts[2].removeSuffix(":")
+        val coordParts = startCoords.split(",")
+
+        startPt = Point(coordParts[0].toInt(), coordParts[1].toInt())
+
+        val dimensions = parts[3].split("x")
+        width = dimensions[0].toInt()
+        height = dimensions[1].toInt()
+
+        claimId = parts[0].removePrefix("#").toInt()
+    }
+
+    fun getClaimPoints() : List<Point>
+    {
+        val list = mutableListOf<Point>()
+        for (x in 0 until width)
+        {
+            for (y in 0 until height)
+            {
+                val pt = Point(startPt.x + x, startPt.y + y)
+                list.add(pt)
+            }
+        }
+
+        return list
+    }
 }
