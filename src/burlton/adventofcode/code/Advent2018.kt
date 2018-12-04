@@ -1,5 +1,6 @@
 package burlton.adventofcode.code
 
+import java.awt.Point
 import java.io.File
 
 fun main(args: Array<String>)
@@ -9,11 +10,48 @@ fun main(args: Array<String>)
 
     calculateBoxesCheckSum()
     findMatchingBoxes()
+
+    findOverlappingTiles()
 }
+
+private fun findOverlappingTiles()
+{
+    val claimList = readFile("3. Fabric Claims")
+
+    val hmSquareToClaims = mutableMapOf<Point, Int>()
+    for (claim in claimList)
+    {
+        val parts = claim.split(" ")
+
+        val startCoords = parts[2].removeSuffix(":")
+        val coordParts = startCoords.split(",")
+
+        val startPt = Point(coordParts[0].toInt(), coordParts[1].toInt())
+
+        val dimensions = parts[3].split("x")
+        val width = dimensions[0].toInt()
+        val height = dimensions[1].toInt()
+
+        for (x in 0 until width)
+        {
+            for (y in 0 until height)
+            {
+                val pt = Point(startPt.x + x, startPt.y + y)
+
+                val current = hmSquareToClaims.getOrDefault(pt, 0)
+                hmSquareToClaims[pt] = current+1
+            }
+        }
+    }
+
+    val filteredMap = hmSquareToClaims.filterKeys {pt -> hmSquareToClaims[pt]!! > 1}
+    println("3A: Number of overlapping square inches = ${filteredMap.size}")
+}
+
 
 private fun findMatchingBoxes()
 {
-    val boxList = readBoxes()
+    val boxList = readFile("2. Boxes")
 
     for ((ix1, box) in boxList.withIndex())
     {
@@ -52,7 +90,7 @@ private fun checkMatchingBoxes(box1 : String, box2 : String)
 
 private fun calculateBoxesCheckSum()
 {
-    val boxList = readBoxes()
+    val boxList = readFile("2. Boxes")
 
     val boxesWithTwoCharsRepeated = boxList.filter {it -> hasRepeatedLetters(it, 2) }
     val boxesWithThreeCharsRepeated = boxList.filter{it -> hasRepeatedLetters(it, 3) }
@@ -120,11 +158,11 @@ private fun readFrequencies() : MutableList<Int>
     return frequencyList
 }
 
-private fun readBoxes() : MutableList<String>
+private fun readFile(filename : String) : MutableList<String>
 {
     val boxList = mutableListOf<String>()
 
-    File("2. Boxes").useLines{ lines -> lines.forEach{boxList.add(it)}}
+    File(filename).useLines{ lines -> lines.forEach{boxList.add(it)}}
 
     return boxList
 }
