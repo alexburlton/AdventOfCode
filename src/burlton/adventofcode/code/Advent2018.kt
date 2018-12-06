@@ -17,6 +17,70 @@ fun main(args: Array<String>)
     findNonOverlappingClaim()
 
     chooseSleepiestGuard()
+
+    chainReaction()
+    findImprovedPolymer()
+}
+
+private fun findImprovedPolymer()
+{
+    val polymer = readFile("5. Polymer").first()
+
+    var bestLength = Integer.MAX_VALUE
+    var bestLetterToRemove = ""
+    val letterArray = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".toCharArray()
+    for (l in letterArray)
+    {
+        var newPolymer = polymer.replace("$l", "", true)
+        newPolymer = doChainReaction(newPolymer)
+
+        if (newPolymer.length < bestLength) {
+            bestLength = newPolymer.length
+            bestLetterToRemove = l.toString()
+        }
+    }
+
+    println("5B: By removing $bestLetterToRemove, size becomes $bestLength")
+
+}
+
+private fun chainReaction()
+{
+    var polymer = readFile("5. Polymer").first()
+
+    polymer = doChainReaction(polymer)
+
+    println("5A: Final size = ${polymer.length} [$polymer]")
+}
+private fun doChainReaction(polymer : String) : String
+{
+    var newPolymer = polymer
+
+    var lastSize : Int
+    var currentSize = polymer.length
+    do
+    {
+        lastSize = currentSize
+        newPolymer = doChainReactionStep(newPolymer)
+        currentSize = newPolymer.length
+    }
+    while (currentSize < lastSize)
+
+    return newPolymer
+}
+private fun doChainReactionStep(polymer: String) : String
+{
+    var newPolymer = polymer
+    val letterArray = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".toCharArray()
+    for (l in letterArray)
+    {
+        val lowerCaseL = l.toLowerCase()
+
+        newPolymer = newPolymer.replace("$l$lowerCaseL", "")
+        newPolymer = newPolymer.replace("$lowerCaseL$l", "")
+    }
+
+    return newPolymer
 }
 
 private fun chooseSleepiestGuard()
