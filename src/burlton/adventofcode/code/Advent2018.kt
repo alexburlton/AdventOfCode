@@ -2,6 +2,8 @@ package burlton.adventofcode.code
 
 import java.awt.Point
 import java.io.File
+import java.sql.Timestamp
+import kotlin.streams.toList
 
 fun main(args: Array<String>)
 {
@@ -13,7 +15,110 @@ fun main(args: Array<String>)
 
     findOverlappingTiles()
     findNonOverlappingClaim()
+
+    chooseSleepiestGuard()
 }
+
+private fun chooseSleepiestGuard()
+{
+    val lines = readFile("4. Guard data")
+
+    //Wrap them up as GuardObservation objects, and sort them by date
+    val observations = lines.stream().map { s -> GuardObservation(s) }.toList()
+    val observationsSorted = observations.sortedBy { it.dt }
+
+    //Get map of {Guard Id -> Total time slept}. Whilst doing this, fill in GuardId on every GuardObservation for later
+    val mapOfGuardSleepTimes = getMapOfGuardIdToNanosAsleep(observationsSorted)
+
+    //Get the last element as the "sleepiest guard"
+    val guardEntries = mapOfGuardSleepTimes.entries.sortedBy{ it.value }
+    val sleepyGuardId = guardEntries.last().key
+
+    //Now need to figure out which minute he's asleep for most often.
+
+    val sleepGuardObservations = observationsSorted.filter{ it -> it.guardId == sleepyGuardId}
+    val hmMinuteToCount = getMostFrequentlyAsleepGuardAndMinute(sleepGuardObservations)
+
+    var guardAndMinute = hmMinuteToCount.entries.sortedBy{it.value}.last().key.split("_")
+
+    println("4A: Guard #${guardAndMinute[0]}, minute ${guardAndMinute[1]} = ${guardAndMinute[0].toInt() * guardAndMinute[1].toInt()}")
+
+    //Method 2 - same as above, but don't filter to the single guard
+    val hmGuardAndMinuteToCount = getMostFrequentlyAsleepGuardAndMinute(observationsSorted)
+    guardAndMinute = hmGuardAndMinuteToCount.entries.sortedBy{it.value}.last().key.split("_")
+
+    println("4B: Guard #${guardAndMinute[0]}, minute ${guardAndMinute[1]} = ${guardAndMinute[0].toInt() * guardAndMinute[1].toInt()}")
+}
+
+private fun getMostFrequentlyAsleepGuardAndMinute(observations : List<GuardObservation>) : Map<String, Int>
+{
+    val hmGuardAndMinuteToCount = mutableMapOf<String, Int>()
+
+    var sleepTime : Timestamp? = null
+
+    observations.forEach{
+        if (it.action == "falls asleep")
+        {
+            sleepTime = it.dt
+        }
+        else if (it.action == "wakes up")
+        {
+            val startMin = getMinutes(sleepTime!!)
+            val endMin = getMinutes(it.dt)
+
+            for (x in startMin until endMin)
+            {
+                val key = "${it.guardId}_$x"
+                val current = hmGuardAndMinuteToCount.getOrDefault(key, 0)
+                hmGuardAndMinuteToCount[key] = current+1
+            }
+        }
+    }
+
+    return hmGuardAndMinuteToCount
+}
+
+
+private fun getMinutes(dt : Timestamp) : Int
+{
+    val dtParts = dt.toString().split(" ")
+
+    return dtParts[1].split(":")[1].toInt()
+}
+
+
+private fun getMapOfGuardIdToNanosAsleep(observationsSorted : List<GuardObservation>) : Map<Int, Long>
+{
+    val guardToSleepTimeNanos = mutableMapOf<Int, Long>()
+    var guardId = -1
+    var asleepTime = Timestamp(System.currentTimeMillis())
+
+    observationsSorted.forEach{
+        if (it.guardId > -1)
+        {
+            guardId = it.guardId
+        }
+        else
+        {
+            it.guardId = guardId
+        }
+
+        if (it.action == "falls asleep")
+        {
+            asleepTime = it.dt
+        }
+        else if (it.action == "wakes up")
+        {
+            val nanosAsleep = it.dt.time - asleepTime.time
+
+            val currentNanos = guardToSleepTimeNanos.getOrDefault(guardId, 0)
+            guardToSleepTimeNanos[guardId] = currentNanos + nanosAsleep
+        }
+    }
+
+    return guardToSleepTimeNanos
+}
+
 
 private fun findOverlappingTiles()
 {
@@ -189,6 +294,38 @@ private fun readFile(filename : String) : MutableList<String>
     File(filename).useLines{ lines -> lines.forEach{boxList.add(it)}}
 
     return boxList
+}
+
+private class GuardObservation(observationStr : String)
+{
+    val dt : Timestamp
+    var guardId = -1
+    var action = ""
+
+    init
+    {
+        val endOfTimeStamp = observationStr.indexOf("]")
+        val dtStr = observationStr.substring(1, endOfTimeStamp) + ":00"
+
+        dt = Timestamp.valueOf(dtStr)
+        val info = observationStr.substring(endOfTimeStamp+2)
+
+        val idIndex = info.indexOf("#")
+        if (idIndex > -1)
+        {
+            val nextSpaceIndex = info.indexOf(" ", idIndex)
+            guardId = info.substring(idIndex+1, nextSpaceIndex).toInt()
+            action = "Change of guard"
+        }
+        else
+        {
+            action = info
+        }
+
+
+
+    }
+
 }
 
 private class Claim(claimStr : String)
