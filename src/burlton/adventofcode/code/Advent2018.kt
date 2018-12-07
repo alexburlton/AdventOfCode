@@ -20,7 +20,72 @@ fun main(args: Array<String>)
 
     chainReaction()
     findImprovedPolymer()
+
+    findLargestFiniteArea()
 }
+
+private fun findLargestFiniteArea()
+{
+    val lines = readFile("6. Coordinates")
+
+    val locList = lines.stream().map{ s -> Point(s.split(", ")[0].toInt(), s.split(", ")[1].toInt())}.toList()
+
+    //Points with infinite areas will be those at the extreme(s). Find out what those are.
+    val minX = locList.sortedBy{it.x}.first().x
+    val maxX = locList.sortedBy{it.x}.last().x
+
+    val minY = locList.sortedBy{it.y}.first().y
+    val maxY = locList.sortedBy{it.y}.last().y
+
+    var locToArea = mutableMapOf<Point, Int>()
+    for (x in minX until maxX)
+    {
+        for (y in minY until maxY)
+        {
+            val loc = computeNearestLoc(Point(x, y), locList)
+            if (loc != null)
+            {
+                val previousArea = locToArea.getOrDefault(loc, 0)
+                locToArea[loc] = previousArea + 1
+            }
+        }
+    }
+
+    locToArea = locToArea.filter{it.key.x != minX
+                    && it.key.x != maxX
+                    && it.key.y != minY
+                    && it.key.y != maxY}.toMutableMap()
+
+    val entries = locToArea.entries.sortedBy{it.value}
+    val biggestEntry = entries.last()
+    println("6A: Largest area is ${biggestEntry.value} for location ${biggestEntry.key}")
+
+}
+private fun computeNearestLoc(pt : Point, locList : List<Point>) : Point?
+{
+    var minDist = Int.MAX_VALUE
+    var minDistLoc : Point? = null
+    for (loc in locList)
+    {
+        val dist = computeManhattenDistance(pt, loc)
+        if (dist < minDist)
+        {
+            minDist = dist
+            minDistLoc = loc
+        }
+        else if (dist == minDist)
+        {
+            minDistLoc = null
+        }
+    }
+
+    return minDistLoc
+}
+private fun computeManhattenDistance(p1 : Point, p2 : Point) : Int
+{
+    return Math.abs(p1.x - p2.x) + Math.abs(p1.y - p2.y)
+}
+
 
 private fun findImprovedPolymer()
 {
