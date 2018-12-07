@@ -23,6 +23,121 @@ fun main(args: Array<String>)
 
     findLargestFiniteArea()
     findPointsWithinTotalDistance()
+
+    workOutOrderOfSteps()
+    computeTimeTakenToCompleteSteps()
+}
+
+private fun computeTimeTakenToCompleteSteps()
+{
+    val hmStepToBlockers = getStepDependencyMap()
+    var timeTaken = 0
+    val workers = mutableListOf(Worker(), Worker(), Worker(), Worker(), Worker())
+    while (!hmStepToBlockers.isEmpty()
+      || !(workers.filter{!it.isFree()}.isEmpty()))
+    {
+        val freeSteps = hmStepToBlockers.keys.filter{hmStepToBlockers[it]!!.isEmpty()}.sortedBy{it}
+        val freeWorkers = workers.filter{it.isFree()}.toMutableList()
+
+        for (step in freeSteps)
+        {
+            if (!freeWorkers.isEmpty())
+            {
+                val worker = freeWorkers.removeAt(0)
+                worker.assignTask(step)
+                hmStepToBlockers.remove(step)
+            }
+        }
+
+        //Now move time along 1 second
+        timeTaken++
+
+        for (worker in workers)
+        {
+            if (!worker.isFree())
+            {
+                worker.secondsRemaining--
+
+                if (worker.isFree())
+                {
+                    removeStep(worker.currentTask, hmStepToBlockers)
+                    worker.currentTask = "" //May as well clear this
+                }
+            }
+        }
+    }
+
+    println("7B: Time taken to complete the steps = ${timeTaken}s")
+}
+
+private class Worker
+{
+    var currentTask = ""
+    var secondsRemaining = 0
+
+    fun isFree() : Boolean
+    {
+        return secondsRemaining <= 0
+    }
+
+    fun assignTask(step : String)
+    {
+        currentTask = step
+        secondsRemaining = step.toCharArray().first().toInt() - 4 //A is 65, so -4 is the right conversion to get 60+alphabet index
+    }
+}
+
+
+
+private fun workOutOrderOfSteps()
+{
+    val hmStepToBlockers = getStepDependencyMap()
+
+    //Now go through and figure out the order
+    var stepSequence = ""
+    while (!hmStepToBlockers.isEmpty())
+    {
+        val freeSteps = hmStepToBlockers.entries.filter{it.value.isEmpty()}
+        val nextStep = freeSteps.sortedBy{it.key}.first().key
+
+        stepSequence += nextStep
+
+        removeStep(nextStep, hmStepToBlockers)
+    }
+
+    println("7A: $stepSequence")
+}
+private fun removeStep(step : String, hmStepToBlockers : MutableMap<String, MutableList<String>>)
+{
+    hmStepToBlockers.remove(step)
+    hmStepToBlockers.entries.forEach{it.value.remove(step)}
+}
+
+
+private fun getStepDependencyMap() : MutableMap<String, MutableList<String>>
+{
+    val lines = readFile("7. Steps")
+
+    //Initialise the map
+    val hmStepToBlockers = mutableMapOf<String, MutableList<String>>()
+
+    val letterArray = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".toCharArray()
+    for (l in letterArray)
+    {
+        hmStepToBlockers[l.toString()] = mutableListOf()
+    }
+
+    for (line in lines)
+    {
+        val parts = line.split(" ")
+
+        val step = parts[7]
+        val blocker = parts[1]
+
+        hmStepToBlockers[step]?.add(blocker)
+    }
+
+    return hmStepToBlockers
 }
 
 private fun readLocations() : List<Point>
@@ -43,6 +158,9 @@ private fun findPointsWithinTotalDistance()
     val sumY = locList.stream().mapToInt{pt -> pt.y}.sum().toDouble()
 
     //The *biggest* X value we need to check is one where
+    //      (X*-x1) + (X*-x2) + ... + (X*-x50) < 10,000
+    //  =>   50X* < 10,000 + sumX
+    //  =>     X* = floor((10000+sumX)/50) is a safe value for X*
     val maxX = Math.floor((10000 + sumX)/50).toInt()
     val minX = Math.ceil((sumX - 10000)/50).toInt()
 
