@@ -22,13 +22,56 @@ fun main(args: Array<String>)
     findImprovedPolymer()
 
     findLargestFiniteArea()
+    findPointsWithinTotalDistance()
+}
+
+private fun readLocations() : List<Point>
+{
+    val lines = readFile("6. Coordinates")
+
+    return lines.stream()
+                .map{ s -> Point(s.split(", ")[0].toInt(), s.split(", ")[1].toInt())}
+                .toList()
+}
+
+private fun findPointsWithinTotalDistance()
+{
+    val locList = readLocations()
+
+    //Work out a "worst case" range to go through and check
+    val sumX = locList.stream().mapToInt{pt -> pt.x}.sum().toDouble()
+    val sumY = locList.stream().mapToInt{pt -> pt.y}.sum().toDouble()
+
+    //The *biggest* X value we need to check is one where
+    val maxX = Math.floor((10000 + sumX)/50).toInt()
+    val minX = Math.ceil((sumX - 10000)/50).toInt()
+
+    val maxY = Math.floor((10000 + sumY)/50).toInt()
+    val minY = Math.ceil((sumY - 10000)/50).toInt()
+
+    var area = 0
+    for (x in minX until maxX)
+    {
+        for (y in minY until maxY)
+        {
+            if (isWithinArea(Point(x, y), locList))
+            {
+                area++
+            }
+        }
+    }
+
+    println("6B: Total area of points within 10,000 = $area")
+}
+private fun isWithinArea(pt : Point, locList: List<Point>) : Boolean
+{
+    val sum = locList.stream().mapToInt{it -> computeManhattenDistance(pt, it)}.sum()
+    return sum < 10000
 }
 
 private fun findLargestFiniteArea()
 {
-    val lines = readFile("6. Coordinates")
-
-    val locList = lines.stream().map{ s -> Point(s.split(", ")[0].toInt(), s.split(", ")[1].toInt())}.toList()
+    val locList = readLocations()
 
     //Points with infinite areas will be those at the extreme(s). Find out what those are.
     val minX = locList.sortedBy{it.x}.first().x
