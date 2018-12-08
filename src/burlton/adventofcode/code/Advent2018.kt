@@ -26,15 +26,84 @@ fun main(args: Array<String>)
 
     workOutOrderOfSteps()
     computeTimeTakenToCompleteSteps()
+
+    computeMetadataSum()
+    computeRootNodeValue()
 }
+
+private fun computeRootNodeValue()
+{
+    val licenseStr = readFile("8. License").first()
+    val digits = licenseStr.split(" ").stream().mapToInt{it -> it.toInt()}.toList().toMutableList()
+
+    val rootValue = parseNodeForValue(digits)
+    println("8B: Root node value = $rootValue")
+}
+
+private fun parseNodeForValue(digits : MutableList<Int>) : Int
+{
+    val children = digits.removeAt(0)
+    val metadata = digits.removeAt(0)
+
+    val hmChildToValue = mutableMapOf<Int, Int>()
+    for (i in 1 until children+1)
+    {
+        hmChildToValue[i] = parseNodeForValue(digits)
+    }
+
+    var sum = 0
+    for (i in 0 until metadata)
+    {
+        val metadataIx = digits.removeAt(0)
+        if (children > 0)
+        {
+            sum += hmChildToValue.getOrDefault(metadataIx, 0)
+        }
+        else
+        {
+            sum += metadataIx
+        }
+    }
+
+    return sum
+}
+private fun computeMetadataSum()
+{
+    val licenseStr = readFile("8. License").first()
+    val digits = licenseStr.split(" ").stream().mapToInt{it -> it.toInt()}.toList().toMutableList()
+    val sum = parseNode(digits)
+
+    println("8A: Metadata sum = $sum")
+}
+private fun parseNode(digits : MutableList<Int>) : Int
+{
+    var metadataSum = 0
+    var children = digits.removeAt(0)
+    val metadata = digits.removeAt(0)
+
+    while (children > 0)
+    {
+        metadataSum += parseNode(digits)
+        children--
+    }
+
+    //Now get the metadata
+    for (i in 0 until metadata)
+    {
+        metadataSum += digits.removeAt(0)
+    }
+
+    return metadataSum
+}
+
 
 private fun computeTimeTakenToCompleteSteps()
 {
     val hmStepToBlockers = getStepDependencyMap()
     var timeTaken = 0
     val workers = mutableListOf(Worker(), Worker(), Worker(), Worker(), Worker())
-    while (!hmStepToBlockers.isEmpty()
-      || !(workers.filter{!it.isFree()}.isEmpty()))
+    while (!hmStepToBlockers.isEmpty() //There are still steps to pick up
+      || !(workers.filter{!it.isFree()}.isEmpty())) //OR there are still workers who are finishing steps
     {
         val freeSteps = hmStepToBlockers.keys.filter{hmStepToBlockers[it]!!.isEmpty()}.sortedBy{it}
         val freeWorkers = workers.filter{it.isFree()}.toMutableList()
