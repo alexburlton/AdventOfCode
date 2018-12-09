@@ -29,6 +29,112 @@ fun main(args: Array<String>)
 
     computeMetadataSum()
     computeRootNodeValue()
+
+    println("9A: Winning score = ${playMarblesGame(432, 71019)}")
+    println("9B: Winning score = ${playMarblesGame(432, 7101900)}")
+}
+
+/**
+ * 432 elves, 71,019 marbles placed after the starting 0
+ */
+private fun playMarblesGame(players: Int, marbles: Int) : Long
+{
+    var gameState = MarbleGameState(players)
+    for (marble in 1 until marbles + 1)
+    {
+        gameState.placeMarble(marble)
+    }
+
+    return gameState.hmElfToScore.entries.sortedBy{it.value}.last().value
+}
+
+private class MarbleGameState(val numberOfPlayers : Int)
+{
+    val marbles = CircularList(0)
+    val hmElfToScore = mutableMapOf<Int, Long>()
+    var currentElf = 1
+    var currentMarble = 0
+
+    fun placeMarble(marble : Int)
+    {
+        if (marble % 23 == 0)
+        {
+            //Remove the marble which is 7 counter-clockwise from the current one
+            val node = marbles.getNodeAtPosition(currentMarble, -7)
+
+            hmElfToScore[currentElf] = hmElfToScore.getOrDefault(currentElf, 0) + marble + node.value
+
+            currentMarble = marbles.getNodeAtPosition(node.value, 1).value
+
+            marbles.removeNode(node)
+        }
+        else
+        {
+            val nodeToInsertAfter = marbles.getNodeAtPosition(currentMarble, 1)
+
+            marbles.insertAfter(nodeToInsertAfter, marble)
+
+            currentMarble = marble
+        }
+
+        currentElf = (currentElf % numberOfPlayers) + 1
+    }
+}
+
+private class CircularList(initialValue : Int)
+{
+    var hmElementToNode = mutableMapOf<Int, Node>()
+
+    init
+    {
+        val node = Node(null, null, initialValue)
+        node.next = node
+        node.previous = node
+
+        hmElementToNode[initialValue] = node
+    }
+
+    fun insertAfter(node : Node, element : Int)
+    {
+        val newNode = Node(node, node.next, element)
+
+        node.next?.previous = newNode
+        node.next = newNode
+
+        hmElementToNode[element] = newNode
+    }
+
+
+    fun removeNode(node : Node)
+    {
+        node.next?.previous = node.previous
+        node.previous?.next = node.next
+
+        hmElementToNode.remove(node.value)
+    }
+
+    fun getNodeAtPosition(element : Int, positionsToMove : Int) : Node
+    {
+        var node = hmElementToNode[element]
+        if (positionsToMove > 0)
+        {
+            for (i in 0 until positionsToMove)
+            {
+                node = node?.next
+            }
+        }
+        else if (positionsToMove < 0)
+        {
+            for (i in positionsToMove until 0)
+            {
+                node = node?.previous
+            }
+        }
+
+        return node!!
+    }
+
+    class Node(var previous : Node?, var next : Node?, var value : Int)
 }
 
 private fun computeRootNodeValue()
