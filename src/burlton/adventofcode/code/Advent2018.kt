@@ -32,6 +32,118 @@ fun main(args: Array<String>)
 
     println("9A: Winning score = ${playMarblesGame(432, 71019)}")
     println("9B: Winning score = ${playMarblesGame(432, 7101900)}")
+
+    findLightMessage()
+}
+
+private fun findLightMessage()
+{
+    val coords = readFile("10. Lights")
+
+    val lightList = coords.stream().map{it -> MessageLight(it)}.toList().toMutableList()
+
+    var timeTaken = 0
+    while (orphanedLightExists(lightList))
+    {
+        lightList.forEach{
+            it.moveCurrentPoint()
+        }
+
+        timeTaken++
+    }
+
+    println("10A:")
+    println("")
+    val finalPoints = lightList.stream().map{it -> it.currentPt}.toList().toMutableList()
+
+    val minX = finalPoints.sortedBy{it.x}.first().x
+    val maxX = finalPoints.sortedBy{it.x}.last().x
+    val minY = finalPoints.sortedBy{it.y}.first().y
+    val maxY = finalPoints.sortedBy{it.y}.last().y
+
+    var lineStr = ""
+    for (y in minY until maxY+1)
+    {
+        for (x in minX until maxX+1)
+        {
+            if (finalPoints.contains(Point(x, y)))
+            {
+                lineStr += "X"
+            }
+            else
+            {
+                lineStr += " "
+            }
+        }
+
+        println(lineStr)
+        lineStr = ""
+    }
+
+    println("")
+    println("10B: $timeTaken")
+}
+private fun orphanedLightExists(lightList : MutableList<MessageLight>) : Boolean
+{
+    for (light in lightList)
+    {
+        //Get the 8 surrounding points. If any of them are in our list, this light is connected and we can continue.
+        //If all 8 are NOT in the list, this is an orphaned light and we assume we have no message
+        if (!containsAdjacentLight(light, lightList))
+        {
+            return true
+        }
+    }
+
+    return false
+}
+private fun containsAdjacentLight(light : MessageLight, allLights :  MutableList<MessageLight>) : Boolean
+{
+    val surroundingCoords = getSurroundingCoordinates(light.currentPt)
+    for (otherLight in allLights)
+    {
+        if (surroundingCoords.contains(otherLight.currentPt))
+        {
+            return true
+        }
+    }
+
+    return false
+}
+private fun getSurroundingCoordinates(pt : Point) : MutableList<Point>
+{
+    return mutableListOf(Point(pt.x - 1, pt.y),
+                         Point(pt.x - 1, pt.y - 1),
+                         Point(pt.x, pt.y - 1),
+                         Point(pt.x+1, pt.y - 1),
+                         Point(pt.x+1, pt.y),
+                         Point(pt.x+1, pt.y+1),
+                         Point(pt.x, pt.y+1),
+                         Point(pt.x-1, pt.y+1))
+}
+
+private class MessageLight(lightStr : String)
+{
+    var currentPt : Point
+    val velocity : Point
+
+    init
+    {
+        val coordStr = lightStr.replace("position=", "").replace("velocity=", "")
+        val separatedStr = coordStr.split("> <")
+
+        val startingPointStrs = separatedStr[0].replace("<", "").split(", ")
+        currentPt = Point(startingPointStrs[0].trim().toInt(), startingPointStrs[1].trim().toInt())
+
+        val velocityStrs = separatedStr[1].replace(">", "").split(", ")
+        velocity = Point(velocityStrs[0].trim().toInt(), velocityStrs[1].trim().toInt())
+    }
+
+    fun moveCurrentPoint()
+    {
+        currentPt.x += velocity.x
+        currentPt.y += velocity.y
+    }
 }
 
 /**
