@@ -5,6 +5,8 @@ import java.io.File
 import java.sql.Timestamp
 import kotlin.streams.toList
 
+val hmPointToFuelValue = mutableMapOf<Point, Int>()
+
 fun main(args: Array<String>)
 {
     calculateTotalFrequency()
@@ -34,7 +36,105 @@ fun main(args: Array<String>)
     println("9B: Winning score = ${playMarblesGame(432, 7101900)}")
 
     findLightMessage()
+
+    println("11A: ${identifyFuelCell(1788, 3)}")
+    identifyFuelCellAllSizes(1788)
 }
+
+private fun identifyFuelCellAllSizes(serialNumber: Int)
+{
+    var currentCell = FuelCellMetadata(0, 0, 0)
+    for (size in 1 until 10) //Technically have to go to 300, but the answer will definitely be small having looked at the grid
+    {
+        val newCell = identifyFuelCell(serialNumber, size)
+        if (newCell.value > currentCell.value)
+        {
+            currentCell = newCell
+            currentCell.gridSize = size
+        }
+    }
+
+    println("11B: $currentCell")
+}
+
+private fun identifyFuelCell(serialNumber : Int, size : Int) : FuelCellMetadata
+{
+    var highestGrid = 0
+    var topLeftPoint = Point(0, 0)
+
+    for (x in 1 until 300 - size + 2)
+    {
+        for (y in 1 until 300 - size + 2)
+        {
+            val gridValue = computeGridValue(x, y, serialNumber, size)
+            if (gridValue > highestGrid)
+            {
+                highestGrid = gridValue
+                topLeftPoint = Point(x, y)
+            }
+        }
+    }
+
+    return FuelCellMetadata(topLeftPoint.x, topLeftPoint.y, highestGrid)
+}
+private fun computeGridValue(x : Int, y : Int, serialNumber : Int, gridSize : Int) : Int
+{
+    var value = 0
+    for (i in x until x+gridSize)
+    {
+        for (j in y until y+gridSize)
+        {
+            value += computeCoordValue(i, j, serialNumber)
+        }
+    }
+
+    return value
+}
+private fun computeCoordValue(x: Int, y: Int, serialNumber: Int) : Int
+{
+    val cachedValue = hmPointToFuelValue[Point(x, y)]
+    if (cachedValue != null)
+    {
+        return cachedValue
+    }
+
+    val rackId = x+10
+    var powerLevel = rackId * y
+    powerLevel += serialNumber
+    powerLevel *= rackId
+
+    val powerLevelStr = powerLevel.toString()
+    val length = powerLevelStr.length
+    if (length < 3)
+    {
+        return 0
+    }
+
+    //Get the hundreds digit
+    val digit = powerLevelStr.substring(length - 3, length - 2)
+    val fuelValue = digit.toInt() - 5
+
+    hmPointToFuelValue[Point(x, y)] = fuelValue
+    return digit.toInt() - 5
+}
+private class FuelCellMetadata(val x : Int, val y : Int, val value : Int)
+{
+    var gridSize = -1
+
+    override fun toString(): String
+    {
+        var str = "$x,$y"
+        if (gridSize > -1)
+        {
+            str += ",$gridSize"
+        }
+
+        str += " [$value]"
+
+        return str
+    }
+}
+
 
 private fun findLightMessage()
 {
