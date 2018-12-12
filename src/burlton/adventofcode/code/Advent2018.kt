@@ -39,7 +39,147 @@ fun main(args: Array<String>)
 
     println("11A: ${identifyFuelCell(1788, 3)}")
     identifyFuelCellAllSizes(1788)
+
+    println("12A: ${iterateEcosystemManually(20)}")
+    doFiftyBillionGenerations()
 }
+
+//Difference settles down to +26 each gen
+private fun doFiftyBillionGenerations()
+{
+    val differenceAndIterationPoint = findEcosystemEventualDifference()
+
+
+    var sum = iterateEcosystemManually(differenceAndIterationPoint[1])
+    sum += (differenceAndIterationPoint[0] * (50000000000-differenceAndIterationPoint[1]))
+
+    println("12B: $sum")
+}
+
+private fun findEcosystemEventualDifference() : MutableList<Long>
+{
+    val ecoSystem = Ecosystem("12. Lifecycle")
+
+    val lastFiveDifferences = mutableListOf<Long>()
+    var previousAliveCount = ecoSystem.getAliveCount()
+    while (lastFiveDifferences.size < 5
+      || !allElementsAreEqual(lastFiveDifferences))
+    {
+        ecoSystem.nextGeneration()
+
+        val difference = ecoSystem.getAliveCount() - previousAliveCount
+
+        lastFiveDifferences.add(difference)
+        if (lastFiveDifferences.size > 5)
+        {
+            lastFiveDifferences.removeAt(0)
+        }
+
+        previousAliveCount = ecoSystem.getAliveCount()
+    }
+
+    return mutableListOf(lastFiveDifferences[0], ecoSystem.currentGeneration)
+}
+
+private fun allElementsAreEqual(list: MutableList<Long>) : Boolean
+{
+    if (list.isEmpty())
+    {
+        return true
+    }
+
+    for (l in list)
+    {
+        if (l != list[0])
+        {
+            return false
+        }
+    }
+
+    return true
+}
+
+
+
+private fun iterateEcosystemManually(generations: Long) : Long
+{
+    val ecoSystem = Ecosystem("12. Lifecycle")
+
+    for (i in 0 until generations)
+    {
+        ecoSystem.nextGeneration()
+    }
+
+    return ecoSystem.getAliveCount()
+}
+private class Ecosystem(filename : String)
+{
+    var currentState : String
+    val hmRules = mutableMapOf<String, String>()
+    var startIx = 0L
+    var currentGeneration = 0L
+
+    init
+    {
+        val lines = readFile(filename)
+        currentState = lines.removeAt(0).split(" ")[2]
+
+        lines.removeAt(0)
+        parseRules(lines)
+    }
+
+    fun parseRules(lines : MutableList<String>)
+    {
+        lines.forEach{
+            val split = it.split(" => ")
+
+            hmRules[split[0]] = split[1]
+        }
+    }
+
+    fun nextGeneration()
+    {
+        var newState = StringBuilder(currentState.length + 8)
+
+        //Pad the current state. ..... => ., so we only need to look two extra spaces each gen
+        currentState = "......$currentState......"
+        startIx -= 4
+
+        for (i in 0 until currentState.length-4)
+        {
+            newState.append(hmRules[currentState.substring(i, i+5)])
+        }
+
+        currentState = newState.toString()
+        currentGeneration++
+    }
+
+    fun getAliveCount() : Long
+    {
+        var count = 0L
+
+        var index = startIx
+        for (s in currentState)
+        {
+            if (s == '#')
+            {
+                count += index
+            }
+
+            index++
+        }
+
+        return count
+    }
+
+    override fun toString(): String
+    {
+        return "$currentGeneration: $currentState [Starts at $startIx, length ${currentState.length}"
+    }
+
+}
+
+
 
 private fun identifyFuelCellAllSizes(serialNumber: Int)
 {
@@ -876,7 +1016,7 @@ private fun checkMatchingBoxes(box1 : String, box2 : String)
     var mismatchIx = 0
     box1.forEachIndexed{index, letter ->
 
-        if (box2[index].equals(letter)) {
+        if (box2[index] == letter) {
             countMatching++
         }
         else
