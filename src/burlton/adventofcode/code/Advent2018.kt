@@ -7,6 +7,9 @@ import kotlin.streams.toList
 
 val hmPointToFuelValue = mutableMapOf<Point, Int>()
 
+//Day 13
+val hmPointToTrack = mutableMapOf<Point, String>()
+
 fun main(args: Array<String>)
 {
     calculateTotalFrequency()
@@ -42,6 +45,207 @@ fun main(args: Array<String>)
 
     println("12A: ${iterateEcosystemManually(20)}")
     doFiftyBillionGenerations()
+
+    findFirstCartCollision()
+    findLastRemainingCartPosition()
+}
+
+private fun findLastRemainingCartPosition()
+{
+    val carts = initialiseTrackAndCarts()
+
+    while (carts.size > 1)
+    {
+        doTickRemovingCollisions(carts)
+    }
+
+    val finalCartCoord = carts.first().currentCoordinate
+
+    println("13B: Final cart ends up at $finalCartCoord")
+}
+
+private fun findFirstCartCollision()
+{
+    val carts = initialiseTrackAndCarts()
+
+    var collisionPt: Point? = null
+    while (collisionPt == null)
+    {
+        collisionPt = doTick(carts)
+    }
+
+    println("13A: First collision at $collisionPt")
+}
+
+private fun initialiseTrackAndCarts() : MutableList<Cart>
+{
+    val lines = readFile("13. Cart track")
+    val carts = mutableListOf<Cart>()
+
+    //Initialise our track hashmap and our list of carts
+    for ((y, line) in lines.withIndex())
+    {
+        val list = line.split("").toMutableList()
+
+        //Remove weird padding at the start and end
+        list.remove("")
+        list.remove("")
+
+        for ((x, trackPiece) in list.withIndex())
+        {
+            val pt = Point(x, y)
+            if (trackPiece == "^"
+                || trackPiece == "v")
+            {
+                carts.add(Cart(pt, trackPiece))
+                hmPointToTrack[pt] = "|"
+            }
+            else if (trackPiece == ">"
+                || trackPiece == "<")
+            {
+                carts.add(Cart(pt, trackPiece))
+                hmPointToTrack[pt] = "-"
+            }
+            else
+            {
+                hmPointToTrack[pt] = trackPiece
+            }
+        }
+    }
+
+    return carts
+}
+
+private fun doTick(carts : MutableList<Cart>) : Point?
+{
+    val cartsSorted = carts.sortedBy{"${it.currentCoordinate.y}_${it.currentCoordinate.x}"}.toMutableList()
+
+    for (cart in cartsSorted)
+    {
+        cart.move()
+
+        val pt = findCollisionPoint(carts)
+        if (pt != null)
+        {
+            return pt
+        }
+    }
+
+    return null
+}
+
+private fun doTickRemovingCollisions(carts : MutableList<Cart>)
+{
+    val cartsSorted = carts.sortedBy{"${it.currentCoordinate.y}_${it.currentCoordinate.x}"}.toMutableList()
+
+    for (cart in cartsSorted)
+    {
+        if (!carts.contains(cart))
+        {
+            //We may have removed it
+            continue
+        }
+
+        cart.move()
+
+        val pt = findCollisionPoint(carts)
+        if (pt != null)
+        {
+            carts.removeIf{it.currentCoordinate == pt}
+        }
+    }
+}
+
+
+private fun findCollisionPoint(carts : MutableList<Cart>) : Point?
+{
+    val pointSet = mutableSetOf<Point>()
+
+    for (cart in carts)
+    {
+        val pt = cart.currentCoordinate
+        if (pointSet.contains(pt))
+        {
+            return pt
+        }
+
+        pointSet.add(pt)
+    }
+
+    return null
+}
+
+val directions = mutableListOf("^", ">", "v", "<", "^", ">", "v", "<")
+private class Cart(var currentCoordinate: Point, var direction: String)
+{
+    var nextCrossroadDirection = "L"
+
+    fun move()
+    {
+        currentCoordinate = when(direction)
+        {
+            "^" -> Point(currentCoordinate.x, currentCoordinate.y - 1)
+            ">" -> Point(currentCoordinate.x + 1, currentCoordinate.y)
+            "<" -> Point(currentCoordinate.x - 1, currentCoordinate.y)
+            else -> Point(currentCoordinate.x, currentCoordinate.y+1)
+        }
+
+        val newTrack = hmPointToTrack[currentCoordinate]
+
+        if (newTrack == "+")
+        {
+            //We need to rotate according to our crossroad instruction
+            if (nextCrossroadDirection == "L")
+            {
+                turnLeft()
+                nextCrossroadDirection = "S"
+            }
+            else if (nextCrossroadDirection == "S")
+            {
+                //Direction remains unchanged.
+                nextCrossroadDirection = "R"
+            }
+            else if (nextCrossroadDirection == "R")
+            {
+                turnRight()
+                nextCrossroadDirection = "L"
+            }
+        }
+        else if (newTrack == "/")
+        {
+            when (direction)
+            {
+                ">", "<" -> turnLeft()
+                "v", "^" -> turnRight()
+                else -> println("Unexpected direction [$direction] hitting / track")
+            }
+        }
+        else if (newTrack == """\""")
+        {
+            when (direction)
+            {
+                ">", "<" -> turnRight()
+                "v", "^" -> turnLeft()
+                else -> println("Unexpected direction [$direction] hitting \\ track")
+            }
+        }
+    }
+
+    private fun turnLeft()
+    {
+        val newIx = directions.lastIndexOf(direction) - 1
+        direction = directions[newIx]
+    }
+
+    private fun turnRight()
+    {
+        val newIx = directions.indexOf(direction) + 1
+        direction = directions[newIx]
+    }
+
+
+
+
 }
 
 //Difference settles down to +26 each gen
@@ -139,7 +343,7 @@ private class Ecosystem(filename : String)
 
     fun nextGeneration()
     {
-        var newState = StringBuilder(currentState.length + 8)
+        val newState = StringBuilder(currentState.length + 8)
 
         //Pad the current state. ..... => ., so we only need to look two extra spaces each gen
         currentState = "......$currentState......"
@@ -391,7 +595,7 @@ private class MessageLight(lightStr : String)
  */
 private fun playMarblesGame(players: Int, marbles: Int) : Long
 {
-    var gameState = MarbleGameState(players)
+    val gameState = MarbleGameState(players)
     for (marble in 1 until marbles + 1)
     {
         gameState.placeMarble(marble)
